@@ -1,27 +1,90 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { getPendingApprovals, getApprovalHistory, createApproval } from '../services/approvals';
 
 const tabs = ['Pending', 'Approved', 'Changes Requested', 'All'];
-
-const reviews = [
-  { id: 1, customer: 'Sarah Chen', category: 'Returns', priority: 'high', status: 'Pending', sla: '1h 45m', summary: 'Customer requesting replacement for damaged order #4521. Item value $89.99.', draft: 'Hi Sarah! Your replacement has been processed and will ship within 1-2 business days. You\'ll receive tracking via email.' },
-  { id: 2, customer: 'Marcus Johnson', category: 'Technical', priority: 'high', status: 'Pending', sla: '2h 30m', summary: 'API integration returning 502 errors during product catalog sync. Affecting production environment.', draft: 'Hi Marcus, we\'ve identified the issue with your API sync. Our engineering team has deployed a fix. Please try syncing again.' },
-  { id: 3, customer: 'Emma Wilson', category: 'Billing', priority: 'high', status: 'Pending', sla: '45m', summary: 'Double charge on subscription. Transaction IDs: TXN-8821 and TXN-8834. Total overcharge: $49.99.', draft: 'Hi Emma, I\'ve verified the duplicate charge and initiated a refund for $49.99. It should appear in 3-5 business days.' },
-  { id: 4, customer: 'Priya Patel', category: 'Billing', priority: 'medium', status: 'Approved', sla: 'Completed', summary: 'Enterprise pricing inquiry for 50+ users. Requesting custom quote.', draft: 'Hi Priya! For teams of 50+, we offer our Enterprise plan at $12/user/month with volume discounts available.' },
-  { id: 5, customer: 'David Kim', category: 'General', priority: 'low', status: 'Changes Requested', sla: '4h 10m', summary: 'Asking about upcoming dashboard feature timeline.', draft: 'Hi David, the new dashboard is scheduled for Q3 release. I\'ll add you to the beta waitlist for early access.' },
-  { id: 6, customer: 'Aisha Mohammed', category: 'Shipping', priority: 'medium', status: 'Pending', sla: '3h 00m', summary: 'Warehouse address update for all future orders. New address: 1200 Commerce Blvd.', draft: 'Hi Aisha, I\'ve updated your default shipping address to 1200 Commerce Blvd. All future orders will use this address.' },
-];
 
 const priorityAccent = { high: '#EF4444', medium: '#F59E0B', low: '#94A3B8' };
 const statusBadge = {
   'Pending': { bg: 'rgba(245,158,11,0.12)', color: '#92400E' },
   'Approved': { bg: 'rgba(16,185,129,0.12)', color: '#059669' },
   'Changes Requested': { bg: 'rgba(239,68,68,0.12)', color: '#991B1B' },
+  'APPROVED': { bg: 'rgba(16,185,129,0.12)', color: '#059669' },
+  'REJECTED': { bg: 'rgba(239,68,68,0.12)', color: '#991B1B' },
+  'CHANGES_REQUESTED': { bg: 'rgba(239,68,68,0.12)', color: '#991B1B' },
+  'ESCALATED': { bg: 'rgba(245,158,11,0.12)', color: '#92400E' },
 };
 
-export default function POCReviews() {
-  const [activeTab, setActiveTab] = useState('Pending');
+const decisionMap = { Approved: 'APPROVED', 'Changes Requested': 'CHANGES_REQUESTED' };
 
-  const filtered = activeTab === 'All' ? reviews : reviews.filter(r => r.status === activeTab);
+export default function POCReviews() {
+  const { currentTenant, user } = useAuth();
+  const [activeTab, setActiveTab] = useState('Pending');
+  const [pendingItems, setPendingItems] = useState([]);
+  const [historyItems, setHistoryItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [actionLoading, setActionLoading] = useState(null);
+
+  const fetchData = useCallback(async () => {
+    if (!currentTenant) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const [pending, history] = await Promise.all([
+        getPendingApprovals(currentTenant.id),
+        getApprovalHistory(currentTenant.id),
+      ]);
+      setPendingItems(pending || []);
+      setHistoryItems(history.data || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentTenant]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleDecision = async (item, decision) => {
+    if (actionLoading) return;
+    setActionLoading(`${item.id}-${decision}`);
+    try {
+      const latestAiRun = item.ai_runs?.length > 0 ? item.ai_runs[item.ai_runs.length - 1] : null;
+      await createApproval(currentTenant.id, {
+        conversation_id: item.id,
+        ai_run_id: latestAiRun?.id || null,
+        reviewer_id: user?.id,
+        decision,
+        original_draft: latestAiRun?.draft_content || '',
+        final_draft: latestAiRun?.draft_content || '',
+      });
+      await fetchData();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  if (!currentTenant) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300, color: 'var(--text-muted)', fontSize: '0.85rem' }}>Select a workspace to view reviews.</div>;
+  }
+
+  const getDisplayItems = () => {
+    if (activeTab === 'Pending') return pendingItems.map((item) => ({ ...item, displayStatus: 'Pending', source: 'pending' }));
+    if (activeTab === 'All') {
+      const all = [
+        ...pendingItems.map((item) => ({ ...item, displayStatus: 'Pending', source: 'pending' })),
+        ...historyItems.map((item) => ({ ...item, displayStatus: item.decision, source: 'history' })),
+      ];
+      return all;
+    }
+    const decision = decisionMap[activeTab];
+    return historyItems.filter((item) => item.decision === decision).map((item) => ({ ...item, displayStatus: item.decision, source: 'history' }));
+  };
+
+  const items = getDisplayItems();
 
   return (
     <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -36,35 +99,60 @@ export default function POCReviews() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1rem' }}>
-        {filtered.map((review) => (
-          <div key={review.id} className="glass-card" style={{ padding: '1.25rem', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: priorityAccent[review.priority] }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{review.customer}</span>
-              <span className="badge" style={{ fontSize: '0.62rem' }}>{review.category}</span>
-              <span style={{ fontSize: '0.62rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: (statusBadge[review.status] || statusBadge['Pending']).bg, color: (statusBadge[review.status] || statusBadge['Pending']).color }}>{review.status}</span>
-            </div>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.75rem', lineHeight: 1.5 }}>{review.summary}</p>
-            <div style={{ background: 'rgba(124,58,237,0.04)', border: '1px dashed rgba(124,58,237,0.2)', borderRadius: '0.75rem', padding: '0.75rem', marginBottom: '0.75rem' }}>
-              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#7C3AED', marginBottom: '0.35rem' }}>AI Draft</div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.5 }}>{review.draft}</p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: review.sla === 'Completed' ? '#059669' : review.priority === 'high' ? '#EF4444' : 'var(--text-muted)' }}>{review.sla}</span>
+      {error && (
+        <div style={{ padding: '1rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.75rem', color: '#991B1B', fontSize: '0.85rem' }}>{error}</div>
+      )}
+
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200, color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading...</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1rem' }}>
+          {items.length === 0 && (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', gridColumn: '1 / -1' }}>No reviews found.</div>
+          )}
+          {items.map((review) => {
+            const conv = review.source === 'history' ? review.conversations : review;
+            const customerName = review.source === 'pending' ? (review.customers?.name || 'Unknown') : (conv?.subject || 'Unknown');
+            const category = conv?.category || 'General';
+            const priority = conv?.priority || 'low';
+            const latestAiRun = review.source === 'pending' && review.ai_runs?.length > 0 ? review.ai_runs[review.ai_runs.length - 1] : null;
+            const draftContent = review.source === 'history' ? (review.final_draft || review.original_draft || '') : (latestAiRun?.draft_content || '');
+            const badgeStyle = statusBadge[review.displayStatus] || statusBadge['Pending'];
+
+            return (
+              <div key={`${review.source}-${review.id}`} className="glass-card" style={{ padding: '1.25rem', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: priorityAccent[priority] || '#94A3B8' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{customerName}</span>
+                  <span className="badge" style={{ fontSize: '0.62rem' }}>{category}</span>
+                  <span style={{ fontSize: '0.62rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: badgeStyle.bg, color: badgeStyle.color }}>{review.displayStatus}</span>
+                </div>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.75rem', lineHeight: 1.5 }}>{conv?.subject || ''}</p>
+                {draftContent && (
+                  <div style={{ background: 'rgba(124,58,237,0.04)', border: '1px dashed rgba(124,58,237,0.2)', borderRadius: '0.75rem', padding: '0.75rem', marginBottom: '0.75rem' }}>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#7C3AED', marginBottom: '0.35rem' }}>AI Draft</div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.5 }}>{draftContent}</p>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>{review.created_at ? new Date(review.created_at).toLocaleDateString() : ''}</span>
+                  </div>
+                  {review.source === 'pending' && (
+                    <div style={{ display: 'flex', gap: '0.35rem' }}>
+                      <button className="btn-primary" style={{ fontSize: '0.68rem', padding: '0.3rem 0.65rem' }} disabled={!!actionLoading} onClick={() => handleDecision(review, 'APPROVED')}>Approve</button>
+                      <button className="btn-secondary" style={{ fontSize: '0.68rem', padding: '0.3rem 0.65rem' }} disabled={!!actionLoading} onClick={() => handleDecision(review, 'CHANGES_REQUESTED')}>Changes</button>
+                      <button className="btn-ghost" style={{ fontSize: '0.68rem', padding: '0.3rem 0.65rem' }} disabled={!!actionLoading} onClick={() => handleDecision(review, 'ESCALATED')}>Escalate</button>
+                      <button className="btn-ghost" style={{ fontSize: '0.68rem', padding: '0.3rem 0.65rem', color: '#EF4444' }} disabled={!!actionLoading} onClick={() => handleDecision(review, 'REJECTED')}>Reject</button>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: '0.35rem' }}>
-                <button className="btn-primary" style={{ fontSize: '0.68rem', padding: '0.3rem 0.65rem' }}>Approve</button>
-                <button className="btn-secondary" style={{ fontSize: '0.68rem', padding: '0.3rem 0.65rem' }}>Changes</button>
-                <button className="btn-ghost" style={{ fontSize: '0.68rem', padding: '0.3rem 0.65rem' }}>Escalate</button>
-                <button className="btn-ghost" style={{ fontSize: '0.68rem', padding: '0.3rem 0.65rem', color: '#EF4444' }}>Reject</button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

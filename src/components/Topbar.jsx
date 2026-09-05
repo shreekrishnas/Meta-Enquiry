@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { supabase } from '../lib/supabase'
 
 function getGreeting() {
   const hour = new Date().getHours()
@@ -9,6 +11,7 @@ function getGreeting() {
 }
 
 function getInitials(name) {
+  if (!name) return ''
   return name
     .split(' ')
     .map(n => n[0])
@@ -18,8 +21,20 @@ function getInitials(name) {
 }
 
 export default function Topbar() {
-  const { user, tenant, tenants, switchTenant } = useAuth()
+  const { user, currentTenant, tenants, switchTenant, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    if (!user || !currentTenant) return
+    supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('tenant_id', currentTenant.id)
+      .eq('read', false)
+      .then(({ count }) => setUnreadCount(count || 0))
+  }, [user, currentTenant])
 
   return (
     <header style={{
@@ -34,10 +49,10 @@ export default function Topbar() {
     }}>
       <div>
         <div style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {getGreeting()}, {user?.name}
+          {getGreeting()}, {user?.full_name}
         </div>
-        <div style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)', marginTop: '2px' }}>
-          {tenant?.name}
+        <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+          {currentTenant?.name}
         </div>
       </div>
 
@@ -78,8 +93,50 @@ export default function Topbar() {
           )}
         </button>
 
+        <button
+          title="Notifications"
+          style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '50%',
+            border: '1px solid var(--border-subtle)',
+            background: 'var(--bg-secondary, transparent)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--text-secondary)',
+            transition: 'all 0.2s ease',
+            position: 'relative',
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          {unreadCount > 0 && (
+            <span style={{
+              position: 'absolute',
+              top: '6px',
+              right: '6px',
+              width: '18px',
+              height: '18px',
+              borderRadius: '50%',
+              background: '#DC2626',
+              color: 'white',
+              fontSize: '0.625rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+
         <select
-          value={tenant?.id || ''}
+          value={currentTenant?.id || ''}
           onChange={(e) => switchTenant(e.target.value)}
           style={{
             padding: '0.5rem 2rem 0.5rem 1rem',
@@ -124,12 +181,33 @@ export default function Topbar() {
             fontSize: '0.75rem',
             fontWeight: 600,
           }}>
-            {user ? getInitials(user.name) : ''}
+            {getInitials(user?.full_name)}
           </div>
           <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--text-primary)' }}>
-            {user?.name}
+            {user?.full_name}
           </span>
         </div>
+
+        <button
+          onClick={signOut}
+          title="Sign out"
+          style={{
+            padding: '0.5rem 0.75rem',
+            borderRadius: '0.5rem',
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--text-muted)',
+            fontSize: '0.8125rem',
+            cursor: 'pointer',
+            transition: 'color 0.2s ease',
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </button>
       </div>
     </header>
   )

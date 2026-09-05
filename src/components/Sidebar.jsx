@@ -67,8 +67,9 @@ const navItems = [
 ]
 
 export default function Sidebar() {
-  const { user } = useAuth()
-  const isAdmin = user?.role?.toLowerCase().includes('admin')
+  const { currentTenant } = useAuth()
+  const role = currentTenant?.role
+  const isAdmin = role === 'SUPER_ADMIN' || role === 'TENANT_ADMIN'
 
   return (
     <nav style={{
