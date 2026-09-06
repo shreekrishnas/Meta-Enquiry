@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { updateTenantSettings } from '../services/tenants';
+import { createArticle } from '../services/knowledgeBase';
 
 const steps = [
   { num: 1, label: 'Connect Meta Account' },
@@ -10,7 +13,98 @@ const steps = [
 ];
 
 export default function TenantOnboarding() {
+  const { currentTenant, user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const [confidenceThreshold, setConfidenceThreshold] = useState(80);
+  const [autoApprove, setAutoApprove] = useState(true);
+  const [slaMinutes, setSlaMinutes] = useState(30);
+  const [selectedCategories] = useState(['Billing', 'Technical', 'Returns', 'Shipping', 'General']);
+
+  const handleSavePOCConfig = async () => {
+    if (!currentTenant) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await updateTenantSettings(currentTenant.id, {
+        ...(currentTenant.settings_json || {}),
+        ai_confidence_threshold: confidenceThreshold,
+        auto_approve_above_threshold: autoApprove,
+      });
+      setCurrentStep(4);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveCategoriesSLA = async () => {
+    if (!currentTenant) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await updateTenantSettings(currentTenant.id, {
+        ...(currentTenant.settings_json || {}),
+        categories: selectedCategories,
+        sla_first_response: slaMinutes,
+      });
+      setCurrentStep(5);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSeedKB = async () => {
+    if (!currentTenant) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await createArticle(currentTenant.id, {
+        title: 'Getting Started',
+        content: 'Welcome to the knowledge base. Add your FAQ and policy documents here.',
+        category: 'General',
+        owner_id: user?.id,
+      });
+      setCurrentStep(6);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleActivate = async () => {
+    if (!currentTenant) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await updateTenantSettings(currentTenant.id, {
+        ...(currentTenant.settings_json || {}),
+        status: 'ACTIVE',
+        onboarding_complete: true,
+      });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleConnectMeta = () => {
+    window.open('https://www.facebook.com/v18.0/dialog/oauth?client_id=YOUR_APP_ID&redirect_uri=YOUR_REDIRECT&scope=pages_messaging,pages_read_engagement', '_blank');
+  };
+
+  const goNext = () => {
+    if (currentStep === 3) { handleSavePOCConfig(); return; }
+    if (currentStep === 4) { handleSaveCategoriesSLA(); return; }
+    if (currentStep === 5) { handleSeedKB(); return; }
+    setCurrentStep(Math.min(6, currentStep + 1));
+  };
 
   return (
     <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: 720, margin: '0 auto' }}>
@@ -18,6 +112,10 @@ export default function TenantOnboarding() {
         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>Tenant Onboarding</h1>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.25rem 0 0' }}>Step {currentStep} of {steps.length}</p>
       </div>
+
+      {error && (
+        <div style={{ padding: '0.75rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.75rem', color: '#991B1B', fontSize: '0.82rem' }}>{error}</div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0 }}>
         {steps.map((step, i) => (
@@ -52,13 +150,14 @@ export default function TenantOnboarding() {
             </div>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.5rem' }}>Connect Your Meta Account</h2>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0 0 1.5rem', lineHeight: 1.6 }}>Link your Meta Business account to start receiving messages from Facebook and Instagram pages.</p>
-            <button className="btn-primary" style={{ fontSize: '0.85rem', padding: '0.6rem 1.5rem' }}>Connect with Meta</button>
+            <button className="btn-primary" style={{ fontSize: '0.85rem', padding: '0.6rem 1.5rem' }} onClick={handleConnectMeta}>Connect with Meta</button>
           </div>
         )}
         {currentStep === 2 && (
           <div>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 1rem' }}>Select Pages to Monitor</h2>
-            {['Acme Corp Official (Facebook)', 'Acme Support (Instagram)', 'Acme Store (Facebook)'].map((page) => (
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Pages will appear here after connecting your Meta account.</p>
+            {['Page 1 (Facebook)', 'Page 2 (Instagram)'].map((page) => (
               <label key={page} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', border: '1px solid var(--border-subtle)', borderRadius: '0.75rem', marginBottom: '0.5rem', cursor: 'pointer' }}>
                 <input type="checkbox" defaultChecked style={{ accentColor: '#0EA5E9' }} />
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-primary)' }}>{page}</span>
@@ -72,11 +171,11 @@ export default function TenantOnboarding() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>AI Confidence Threshold (%)</label>
-                <input className="glass-input" type="number" defaultValue="80" style={{ width: '100%' }} />
+                <input className="glass-input" type="number" value={confidenceThreshold} onChange={(e) => setConfidenceThreshold(Number(e.target.value))} style={{ width: '100%' }} />
               </div>
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Auto-approve above threshold</label>
-                <input type="checkbox" defaultChecked style={{ accentColor: '#0EA5E9' }} />
+                <input type="checkbox" checked={autoApprove} onChange={(e) => setAutoApprove(e.target.checked)} style={{ accentColor: '#0EA5E9' }} />
               </div>
             </div>
           </div>
@@ -88,14 +187,14 @@ export default function TenantOnboarding() {
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Default Categories</label>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {['Billing', 'Technical', 'Returns', 'Shipping', 'General'].map((c) => (
+                  {selectedCategories.map((c) => (
                     <span key={c} className="badge">{c}</span>
                   ))}
                 </div>
               </div>
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>First Response SLA (minutes)</label>
-                <input className="glass-input" type="number" defaultValue="30" style={{ width: '100%' }} />
+                <input className="glass-input" type="number" value={slaMinutes} onChange={(e) => setSlaMinutes(Number(e.target.value))} style={{ width: '100%' }} />
               </div>
             </div>
           </div>
@@ -115,7 +214,7 @@ export default function TenantOnboarding() {
             </div>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.5rem' }}>Ready to Go Live!</h2>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0 0 1.25rem', lineHeight: 1.6 }}>Your tenant is fully configured. Activate to start receiving and processing conversations.</p>
-            <button className="btn-primary" style={{ fontSize: '0.85rem', padding: '0.6rem 2rem', background: '#10B981' }}>Activate Tenant</button>
+            <button className="btn-primary" style={{ fontSize: '0.85rem', padding: '0.6rem 2rem', background: '#10B981' }} disabled={saving} onClick={handleActivate}>{saving ? 'Activating...' : 'Activate Tenant'}</button>
           </div>
         )}
       </div>
@@ -126,8 +225,8 @@ export default function TenantOnboarding() {
           Back
         </button>
         {currentStep < 6 && (
-          <button className="btn-primary" onClick={() => setCurrentStep(Math.min(6, currentStep + 1))}>
-            Next
+          <button className="btn-primary" onClick={goNext} disabled={saving}>
+            {saving ? 'Saving...' : 'Next'}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 4 }}><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         )}
