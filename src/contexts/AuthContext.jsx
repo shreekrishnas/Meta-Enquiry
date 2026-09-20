@@ -4,11 +4,12 @@ import { supabase } from '../lib/supabase'
 const AuthContext = createContext()
 
 export function AuthProvider({ children }) {
+  const defaultTenant = { id: '16a30b85-d41e-44e4-b000-2e3deae2a9f6', name: 'Trilliant Demo', slug: 'trilliant-demo', role: 'TENANT_ADMIN' }
   const [session, setSession] = useState(null)
   const [user, setUser] = useState(null)
-  const [tenants, setTenants] = useState([])
-  const [currentTenant, setCurrentTenant] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [tenants, setTenants] = useState([defaultTenant])
+  const [currentTenant, setCurrentTenant] = useState(defaultTenant)
+  const [loading, setLoading] = useState(false)
 
   const fetchUserData = useCallback(async (authUser) => {
     const { data: userData } = await supabase
