@@ -138,7 +138,7 @@ export default function Analytics() {
               )}
               {performers.map((p) => (
                 <tr key={p.user?.id || p.user?.email}>
-                  <td style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', padding: '0.6rem 0.75rem', borderBottom: '1px solid rgba(15,23,42,0.04)' }}>{p.user?.name || p.user?.email || 'Unknown'}</td>
+                  <td style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', padding: '0.6rem 0.75rem', borderBottom: '1px solid rgba(15,23,42,0.04)' }}>{p.user?.full_name || p.user?.email || 'Unknown'}</td>
                   <td style={{ fontSize: '0.82rem', color: 'var(--text-primary)', padding: '0.6rem 0.75rem', borderBottom: '1px solid rgba(15,23,42,0.04)' }}>{p.resolved}</td>
                   <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)', padding: '0.6rem 0.75rem', borderBottom: '1px solid rgba(15,23,42,0.04)' }}>{formatMs(p.avgResolveTimeMs)}</td>
                   <td style={{ fontSize: '0.82rem', color: 'var(--text-primary)', padding: '0.6rem 0.75rem', borderBottom: '1px solid rgba(15,23,42,0.04)' }}>{p.total}</td>

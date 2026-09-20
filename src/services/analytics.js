@@ -99,7 +99,7 @@ export async function getTeamPerformance(tenantId) {
 
   const { data: users, error: usersError } = await supabase
     .from('users')
-    .select('id, name, email')
+    .select('id, full_name, email')
     .in('id', userIds)
   if (usersError) throw new Error(usersError.message)
 
@@ -120,7 +120,7 @@ export async function getTeamPerformance(tenantId) {
 export async function getAIMetrics(tenantId) {
   const { data, error } = await supabase
     .from('ai_runs')
-    .select('confidence_score, latency_ms, status')
+    .select('confidence, latency_ms, status')
     .eq('tenant_id', tenantId)
   if (error) throw new Error(error.message)
 
@@ -135,7 +135,7 @@ export async function getAIMetrics(tenantId) {
   const byStatus = {}
 
   for (const run of data) {
-    if (run.confidence_score != null) { totalConfidence += run.confidence_score; confidenceCount++ }
+    if (run.confidence != null) { totalConfidence += run.confidence; confidenceCount++ }
     if (run.latency_ms != null) { totalLatency += run.latency_ms; latencyCount++ }
     byStatus[run.status] = (byStatus[run.status] || 0) + 1
   }

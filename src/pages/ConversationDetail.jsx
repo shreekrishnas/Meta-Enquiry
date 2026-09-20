@@ -128,7 +128,7 @@ export default function ConversationDetail() {
     <div className="page-enter" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.25rem', minHeight: 'calc(100vh - 120px)' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div className="glass-card-static" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <h1 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>{customer.name || 'Unknown'}</h1>
+          <h1 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>{customer.display_name || 'Unknown'}</h1>
           <span style={{ fontSize: '0.66rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: 9999, background: channelStyle.bg, color: channelStyle.color }}>{channel}</span>
           <span style={{ fontSize: '0.66rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: 9999, background: 'rgba(14,165,233,0.12)', color: '#0284C7' }}>{statusLabels[conversation.status] || conversation.status}</span>
           <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Conversation #{id}</div>

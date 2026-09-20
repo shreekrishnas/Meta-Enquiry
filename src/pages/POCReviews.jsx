@@ -112,7 +112,7 @@ export default function POCReviews() {
           )}
           {items.map((review) => {
             const conv = review.source === 'history' ? review.conversations : review;
-            const customerName = review.source === 'pending' ? (review.customers?.name || 'Unknown') : (conv?.subject || 'Unknown');
+            const customerName = review.source === 'pending' ? (review.customers?.display_name || 'Unknown') : (conv?.subject || 'Unknown');
             const category = conv?.category || 'General';
             const priority = conv?.priority || 'low';
             const latestAiRun = review.source === 'pending' && review.ai_runs?.length > 0 ? review.ai_runs[review.ai_runs.length - 1] : null;

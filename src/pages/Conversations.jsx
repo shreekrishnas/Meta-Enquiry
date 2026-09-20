@@ -122,9 +122,9 @@ export default function Conversations() {
           )}
           {conversations.map((conv, idx) => (
             <div key={conv.id} onClick={() => navigate(`/conversations/${conv.id}`)} style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', padding: '0.85rem 1.1rem', borderBottom: '1px solid rgba(15,23,42,0.04)', cursor: 'pointer', borderLeft: `3px solid ${priorityBorder[conv.priority] || '#D1D5DB'}`, transition: 'background 0.15s' }}>
-              <div style={{ width: 38, height: 38, borderRadius: '50%', background: gradients[idx % gradients.length], display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>{getInitials(conv.customers?.name)}</div>
+              <div style={{ width: 38, height: 38, borderRadius: '50%', background: gradients[idx % gradients.length], display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>{getInitials(conv.customers?.display_name)}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)' }}>{conv.customers?.name || 'Unknown'}</div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)' }}>{conv.customers?.display_name || 'Unknown'}</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 360 }}>{conv.subject || ''}</div>
               </div>
               <span className="badge" style={{ fontSize: '0.66rem' }}>{conv.category || 'General'}</span>

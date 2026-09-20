@@ -160,7 +160,7 @@ export default function Dashboard() {
           {recentConversations.map((conv) => (
             <div key={conv.id} onClick={() => navigate(`/conversations/${conv.id}`)} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.7rem 0', borderBottom: '1px solid rgba(15,23,42,0.04)', cursor: 'pointer' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: statusColors[conv.status] || '#94A3B8', flexShrink: 0 }} />
-              <div style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>{conv.customers?.name || conv.subject || 'Unknown'}</div>
+              <div style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>{conv.customers?.display_name || conv.subject || 'Unknown'}</div>
               <span className="badge" style={{ fontSize: '0.68rem' }}>{conv.category || 'General'}</span>
               <span style={{ fontSize: '0.68rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '9999px', ...(priorityStyles[conv.priority] || priorityStyles.low) }}>{conv.priority || 'low'}</span>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', minWidth: 50, textAlign: 'right' }}>{timeAgo(conv.updated_at)}</div>
