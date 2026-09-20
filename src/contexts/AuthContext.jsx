@@ -55,8 +55,8 @@ export function AuthProvider({ children }) {
         fetchUserData(s.user).finally(() => setLoading(false))
       } else {
         setUser(null)
-        setTenants([])
-        setCurrentTenant(null)
+        setTenants([defaultTenant])
+        setCurrentTenant(defaultTenant)
         setLoading(false)
       }
     })

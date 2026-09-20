@@ -143,7 +143,7 @@ export default function ConversationDetail() {
             const isCustomer = msg.direction === 'INBOUND';
             return (
               <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isCustomer ? 'flex-start' : 'flex-end', maxWidth: '75%', alignSelf: isCustomer ? 'flex-start' : 'flex-end' }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>{msg.sender_name || (isCustomer ? customer.name : 'Agent')} &middot; {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>{msg.sender_name || (isCustomer ? customer.display_name : 'Agent')} &middot; {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                 <div style={{ padding: '0.75rem 1rem', borderRadius: '1rem', fontSize: '0.82rem', lineHeight: 1.5, color: 'var(--text-primary)', background: isCustomer ? 'var(--surface-card)' : 'rgba(14,165,233,0.08)', border: '1px solid var(--border-subtle)' }}>{msg.content}</div>
               </div>
             );
@@ -176,9 +176,9 @@ export default function ConversationDetail() {
         <div className="glass-card-static" style={{ padding: '1.1rem' }}>
           <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Customer Info</div>
           {[
-            ['Email', customer.email || '-'],
-            ['Phone', customer.phone || '-'],
-            ['Platform', customer.platform || '-'],
+            ['Channel', customer.channel || '-'],
+            ['ID', customer.external_customer_id || '-'],
+            ['Name', customer.display_name || '-'],
           ].map(([label, val]) => (
             <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px solid rgba(15,23,42,0.04)' }}>
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{label}</span>

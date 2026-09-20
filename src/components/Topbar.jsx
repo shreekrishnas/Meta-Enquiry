@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { supabase } from '../lib/supabase'
@@ -23,6 +24,7 @@ function getInitials(name) {
 export default function Topbar() {
   const { user, currentTenant, tenants, switchTenant, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const navigate = useNavigate()
   const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
@@ -189,7 +191,7 @@ export default function Topbar() {
         </div>
 
         <button
-          onClick={signOut}
+          onClick={() => { signOut().then(() => navigate('/login')).catch(() => navigate('/login')) }}
           title="Sign out"
           style={{
             padding: '0.5rem 0.75rem',

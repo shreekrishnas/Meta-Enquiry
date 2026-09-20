@@ -261,7 +261,7 @@ export default function Settings() {
             {members.map((m) => (
               <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.7rem 0.85rem', border: '1px solid var(--border-subtle)', borderRadius: '0.75rem' }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>{m.users?.name || m.users?.email || 'Unknown'}</div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>{m.users?.full_name || m.users?.email || 'Unknown'}</div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{m.users?.email}</div>
                 </div>
                 <select className="glass-input" value={m.role} onChange={(e) => handleRoleChange(m.id, e.target.value)} style={{ width: 100, fontSize: '0.72rem', padding: '0.25rem' }}>
