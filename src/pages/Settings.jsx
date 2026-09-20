@@ -5,10 +5,7 @@ import { getIntegrations, connectPage, disconnectPage } from '../services/metaIn
 
 const settingsTabs = ['General', 'Meta Connection', 'Categories', 'SLA & Hours', 'Team'];
 
-const card = { background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: '1.25rem' };
-const sectionTitle = { fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1rem' };
-const fieldLabel = { fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', display: 'block', marginBottom: '0.375rem' };
-const inputStyle = { width: '100%', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-input)', background: 'var(--surface-input)', color: 'var(--text-primary)', fontSize: '0.8125rem', outline: 'none', boxSizing: 'border-box' };
+const inputStyle = { width: '100%', padding: '0.5625rem 0.875rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-input)', background: 'var(--surface-input)', color: 'var(--text-primary)', fontSize: '0.8125rem', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s, box-shadow 0.2s' };
 
 export default function Settings() {
   const { currentTenant, user } = useAuth();
@@ -92,32 +89,29 @@ export default function Settings() {
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300, color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Loading...</div>;
 
   const categories = tenant?.settings_json?.categories || ['Billing', 'Technical', 'Returns', 'Shipping', 'General'];
+  const fieldLabel = { fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.04em' };
 
   return (
-    <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div>
-        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Settings</h1>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', margin: '0.125rem 0 0' }}>Manage workspace configuration</p>
+        <h1 style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>Settings</h1>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', margin: '0.25rem 0 0' }}>Manage workspace configuration</p>
       </div>
 
       {error && <div style={{ padding: '0.75rem', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-md)', color: '#991B1B', fontSize: '0.8125rem' }}>{error}</div>}
 
-      <div style={{ display: 'flex', gap: '2px', background: 'var(--surface-hover)', borderRadius: 'var(--radius-md)', padding: '3px', width: 'fit-content' }}>
+      <div className="tab-group">
         {settingsTabs.map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab)} style={{
-            padding: '0.375rem 0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', fontWeight: 500,
-            border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-            background: activeTab === tab ? 'var(--surface-card)' : 'transparent',
-            color: activeTab === tab ? 'var(--text-primary)' : 'var(--text-muted)',
-            boxShadow: activeTab === tab ? 'var(--shadow-xs)' : 'none',
-          }}>{tab}</button>
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`tab-item${activeTab === tab ? ' active' : ''}`}>{tab}</button>
         ))}
       </div>
 
       {activeTab === 'General' && (
-        <div style={{ ...card, maxWidth: 560 }}>
-          <div style={sectionTitle}>General Settings</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+        <div className="glass-card-static" style={{ padding: '1.5rem', maxWidth: 560 }}>
+          <div className="section-header">
+            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>General Settings</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div><label style={fieldLabel}>Tenant Name</label><input value={tenantName} onChange={(e) => setTenantName(e.target.value)} style={inputStyle} /></div>
             <div><label style={fieldLabel}>Slug</label><input value={tenantSlug} onChange={(e) => setTenantSlug(e.target.value)} style={inputStyle} /></div>
             <div><label style={fieldLabel}>Language</label><input value={tenantLanguage} onChange={(e) => setTenantLanguage(e.target.value)} style={inputStyle} /></div>
@@ -127,18 +121,20 @@ export default function Settings() {
       )}
 
       {activeTab === 'Meta Connection' && (
-        <div style={card}>
-          <div style={sectionTitle}>Connected Pages</div>
+        <div className="glass-card-static" style={{ padding: '1.5rem' }}>
+          <div className="section-header">
+            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>Connected Pages</span>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {integrations.length === 0 && <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>No connected pages.</div>}
+            {integrations.length === 0 && <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>No connected pages.</div>}
             {integrations.map((page) => (
-              <div key={page.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.75rem', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: page.status !== 'DISCONNECTED' ? '#10B981' : '#94A3B8' }} />
+              <div key={page.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', background: 'var(--surface-card-header)' }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: page.status !== 'DISCONNECTED' ? '#10B981' : '#94A3B8', boxShadow: page.status !== 'DISCONNECTED' ? '0 0 8px rgba(16,185,129,0.3)' : 'none' }} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--text-primary)' }}>{page.meta_page_name || page.meta_page_id}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{page.channel}</div>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>{page.meta_page_name || page.meta_page_id}</div>
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{page.channel}</div>
                 </div>
-                <button className={page.status !== 'DISCONNECTED' ? 'btn-ghost' : 'btn-ghost'} style={{ color: page.status !== 'DISCONNECTED' ? '#EF4444' : 'var(--text-muted)' }} onClick={() => page.status !== 'DISCONNECTED' ? handleDisconnect(page.id) : null}>
+                <button className={page.status !== 'DISCONNECTED' ? 'btn-danger' : 'btn-ghost'} style={{ fontSize: '0.75rem', padding: '0.3125rem 0.625rem' }} onClick={() => page.status !== 'DISCONNECTED' ? handleDisconnect(page.id) : null}>
                   {page.status !== 'DISCONNECTED' ? 'Disconnect' : 'Disconnected'}
                 </button>
               </div>
@@ -148,21 +144,26 @@ export default function Settings() {
       )}
 
       {activeTab === 'Categories' && (
-        <div style={card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>Conversation Categories</div>
-            <button className="btn-primary">Add Category</button>
+        <div className="glass-card-static" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <div className="section-header" style={{ marginBottom: 0 }}>
+              <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>Conversation Categories</span>
+            </div>
+            <button className="btn-primary" style={{ fontSize: '0.75rem' }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="13" height="13" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Category
+            </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
             {(Array.isArray(categories) ? categories : []).map((cat, idx) => {
               const catName = typeof cat === 'string' ? cat : cat.name;
               const catColor = typeof cat === 'object' && cat.color ? cat.color : ['#3B82F6', '#8B5CF6', '#EF4444', '#F59E0B', '#94A3B8'][idx % 5];
               return (
-                <div key={catName} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.5rem 0.75rem', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: catColor }} />
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--text-primary)', flex: 1 }}>{catName}</span>
-                  <button className="btn-ghost">Edit</button>
-                  <button className="btn-ghost" style={{ color: '#EF4444' }}>Delete</button>
+                <div key={catName} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 1rem', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: catColor, boxShadow: `0 0 6px ${catColor}40` }} />
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{catName}</span>
+                  <button className="btn-ghost" style={{ fontSize: '0.6875rem', padding: '0.25rem 0.5rem' }}>Edit</button>
+                  <button className="btn-ghost" style={{ fontSize: '0.6875rem', padding: '0.25rem 0.5rem', color: '#EF4444' }}>Delete</button>
                 </div>
               );
             })}
@@ -171,9 +172,11 @@ export default function Settings() {
       )}
 
       {activeTab === 'SLA & Hours' && (
-        <div style={{ ...card, maxWidth: 560 }}>
-          <div style={sectionTitle}>SLA Configuration</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+        <div className="glass-card-static" style={{ padding: '1.5rem', maxWidth: 560 }}>
+          <div className="section-header">
+            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>SLA Configuration</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div><label style={fieldLabel}>First Response SLA (minutes)</label><input type="number" value={slaFirstResponse} onChange={(e) => setSlaFirstResponse(Number(e.target.value))} style={inputStyle} /></div>
             <div><label style={fieldLabel}>Resolution SLA (hours)</label><input type="number" value={slaResolution} onChange={(e) => setSlaResolution(Number(e.target.value))} style={inputStyle} /></div>
             <div><label style={fieldLabel}>Business Hours</label><input value={businessHours} onChange={(e) => setBusinessHours(e.target.value)} style={inputStyle} /></div>
@@ -183,9 +186,11 @@ export default function Settings() {
       )}
 
       {activeTab === 'Team' && (
-        <div style={card}>
-          <div style={sectionTitle}>Team Members</div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+        <div className="glass-card-static" style={{ padding: '1.5rem' }}>
+          <div className="section-header">
+            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>Team Members</span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
             <input placeholder="Email address" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
             <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} style={{ ...inputStyle, width: 110 }}>
               <option value="admin">Admin</option>
@@ -195,19 +200,22 @@ export default function Settings() {
             <button className="btn-primary" disabled={inviting} onClick={handleInvite}>{inviting ? 'Inviting...' : 'Invite'}</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-            {members.length === 0 && <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>No team members.</div>}
+            {members.length === 0 && <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>No team members.</div>}
             {members.map((m) => (
-              <div key={m.id} className="table-row" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.5rem 0.75rem', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--text-primary)' }}>{m.users?.full_name || m.users?.email || 'Unknown'}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{m.users?.email}</div>
+              <div key={m.id} className="table-row" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 1rem', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+                <div style={{ width: 32, height: 32, borderRadius: '8px', background: 'var(--accent-primary-soft)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6875rem', fontWeight: 700, flexShrink: 0 }}>
+                  {(m.users?.full_name || m.users?.email || '?')[0]?.toUpperCase()}
                 </div>
-                <select value={m.role} onChange={(e) => handleRoleChange(m.id, e.target.value)} style={{ ...inputStyle, width: 100, padding: '0.25rem 0.5rem' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>{m.users?.full_name || m.users?.email || 'Unknown'}</div>
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{m.users?.email}</div>
+                </div>
+                <select value={m.role} onChange={(e) => handleRoleChange(m.id, e.target.value)} style={{ ...inputStyle, width: 100, padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
                   <option value="admin">Admin</option>
                   <option value="poc">POC</option>
                   <option value="agent">Agent</option>
                 </select>
-                <button className="btn-ghost" style={{ color: '#EF4444' }} onClick={() => handleRemoveMember(m.id)}>Remove</button>
+                <button className="btn-ghost" style={{ color: '#EF4444', fontSize: '0.75rem' }} onClick={() => handleRemoveMember(m.id)}>Remove</button>
               </div>
             ))}
           </div>

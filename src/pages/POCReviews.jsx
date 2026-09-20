@@ -7,15 +7,14 @@ const tabLabels = { Pending: 'Pending', Approved: 'Approved', 'Changes Requested
 
 const priorityAccent = { high: '#EF4444', HIGH: '#EF4444', CRITICAL: '#DC2626', medium: '#F59E0B', NORMAL: '#F59E0B', low: '#94A3B8', LOW: '#94A3B8' };
 const statusBadge = {
-  Pending: { bg: '#FFFBEB', color: '#92400E' },
-  APPROVED: { bg: '#ECFDF5', color: '#059669' },
-  REJECTED: { bg: '#FEF2F2', color: '#991B1B' },
-  CHANGES_REQUESTED: { bg: '#FEF2F2', color: '#991B1B' },
-  ESCALATED: { bg: '#FFFBEB', color: '#92400E' },
+  Pending: { bg: 'rgba(245,158,11,0.08)', color: '#D97706', border: 'rgba(245,158,11,0.15)' },
+  APPROVED: { bg: 'rgba(16,185,129,0.08)', color: '#059669', border: 'rgba(16,185,129,0.15)' },
+  REJECTED: { bg: 'rgba(239,68,68,0.08)', color: '#DC2626', border: 'rgba(239,68,68,0.15)' },
+  CHANGES_REQUESTED: { bg: 'rgba(239,68,68,0.08)', color: '#DC2626', border: 'rgba(239,68,68,0.15)' },
+  ESCALATED: { bg: 'rgba(245,158,11,0.08)', color: '#D97706', border: 'rgba(245,158,11,0.15)' },
 };
 
 const decisionMap = { Approved: 'APPROVED', 'Changes Requested': 'CHANGES_REQUESTED' };
-const card = { background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)' };
 
 export default function POCReviews() {
   const { currentTenant, user } = useAuth();
@@ -63,21 +62,23 @@ export default function POCReviews() {
   const items = getDisplayItems();
 
   return (
-    <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <div>
-        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>POC Reviews</h1>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', margin: '0.125rem 0 0' }}>Review and approve AI-generated responses</p>
+    <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <h1 style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>POC Reviews</h1>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', margin: '0.25rem 0 0' }}>Review and approve AI-generated responses</p>
+        </div>
+        {pendingItems.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.75rem', borderRadius: '9999px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.15)' }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#F59E0B', animation: 'fadeIn 1s ease infinite alternate' }} />
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#D97706' }}>{pendingItems.length} pending</span>
+          </div>
+        )}
       </div>
 
-      <div style={{ display: 'flex', gap: '2px', background: 'var(--surface-hover)', borderRadius: 'var(--radius-md)', padding: '3px', width: 'fit-content' }}>
+      <div className="tab-group">
         {tabs.map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab)} style={{
-            padding: '0.375rem 0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', fontWeight: 500,
-            border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-            background: activeTab === tab ? 'var(--surface-card)' : 'transparent',
-            color: activeTab === tab ? 'var(--text-primary)' : 'var(--text-muted)',
-            boxShadow: activeTab === tab ? 'var(--shadow-xs)' : 'none',
-          }}>{tabLabels[tab]}</button>
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`tab-item${activeTab === tab ? ' active' : ''}`}>{tabLabels[tab]}</button>
         ))}
       </div>
 
@@ -85,11 +86,11 @@ export default function POCReviews() {
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200, color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Loading...</div>
+      ) : items.length === 0 ? (
+        <div className="glass-card-static" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>No reviews found.</div>
       ) : (
-        <div style={{ ...card, overflow: 'hidden' }}>
-          {items.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>No reviews found.</div>
-          ) : items.map((review) => {
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+          {items.map((review) => {
             const conv = review.source === 'history' ? review.conversations : review;
             const customerName = review.source === 'pending' ? (review.customers?.display_name || 'Unknown') : (conv?.subject || 'Unknown');
             const category = conv?.category || 'General';
@@ -99,28 +100,36 @@ export default function POCReviews() {
             const badge = statusBadge[review.displayStatus] || statusBadge.Pending;
 
             return (
-              <div key={`${review.source}-${review.id}`} style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', position: 'relative' }}>
-                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: priorityAccent[priority] || '#94A3B8' }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>{customerName}</span>
-                  <span className="badge">{category}</span>
-                  <span style={{ fontSize: '0.6875rem', fontWeight: 500, padding: '0.125rem 0.375rem', borderRadius: 9999, background: badge.bg, color: badge.color }}>{review.displayStatus}</span>
-                  <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{review.created_at ? new Date(review.created_at).toLocaleDateString() : ''}</span>
+              <div key={`${review.source}-${review.id}`} className="glass-card-static" style={{ padding: '1.25rem 1.5rem', position: 'relative', overflow: 'hidden' }}>
+                <div className="priority-stripe" style={{ background: priorityAccent[priority] || '#94A3B8' }} />
+                <div style={{ paddingLeft: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>{customerName}</span>
+                    <span className="badge">{category}</span>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.1875rem 0.5rem', borderRadius: 9999, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}>{review.displayStatus}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{review.created_at ? new Date(review.created_at).toLocaleDateString() : ''}</span>
+                  </div>
+                  {draftContent && (
+                    <div className="ai-draft-box" style={{ marginBottom: '0.875rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.375rem' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth={1.5} width="14" height="14" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l1.09 3.41L16.5 4.5l-1.41 3.41L18.5 9l-3.41 1.09L16.5 13.5l-3.41-1.41L12 15.5l-1.09-3.41L7.5 13.5l1.41-3.41L5.5 9l3.41-1.09L7.5 4.5l3.41 1.41z"/></svg>
+                        <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AI Draft</span>
+                      </div>
+                      <p style={{ fontSize: '0.8125rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.6 }}>{draftContent}</p>
+                    </div>
+                  )}
+                  {review.source === 'pending' && (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="btn-primary" style={{ fontSize: '0.75rem' }} disabled={!!actionLoading} onClick={() => handleDecision(review, 'APPROVED')}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="13" height="13" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Approve
+                      </button>
+                      <button className="btn-secondary" style={{ fontSize: '0.75rem' }} disabled={!!actionLoading} onClick={() => handleDecision(review, 'CHANGES_REQUESTED')}>Request Changes</button>
+                      <button className="btn-ghost" style={{ fontSize: '0.75rem' }} disabled={!!actionLoading} onClick={() => handleDecision(review, 'ESCALATED')}>Escalate</button>
+                      <button className="btn-ghost" style={{ fontSize: '0.75rem', color: '#EF4444' }} disabled={!!actionLoading} onClick={() => handleDecision(review, 'REJECTED')}>Reject</button>
+                    </div>
+                  )}
                 </div>
-                {draftContent && (
-                  <div style={{ background: '#F5F3FF', border: '1px dashed #C4B5FD', borderRadius: 'var(--radius-md)', padding: '0.625rem 0.75rem', marginBottom: '0.625rem' }}>
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#7C3AED', marginBottom: '0.25rem' }}>AI Draft</div>
-                    <p style={{ fontSize: '0.8125rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.5 }}>{draftContent}</p>
-                  </div>
-                )}
-                {review.source === 'pending' && (
-                  <div style={{ display: 'flex', gap: '0.375rem' }}>
-                    <button className="btn-primary" disabled={!!actionLoading} onClick={() => handleDecision(review, 'APPROVED')}>Approve</button>
-                    <button className="btn-secondary" disabled={!!actionLoading} onClick={() => handleDecision(review, 'CHANGES_REQUESTED')}>Changes</button>
-                    <button className="btn-ghost" disabled={!!actionLoading} onClick={() => handleDecision(review, 'ESCALATED')}>Escalate</button>
-                    <button className="btn-ghost" style={{ color: '#EF4444' }} disabled={!!actionLoading} onClick={() => handleDecision(review, 'REJECTED')}>Reject</button>
-                  </div>
-                )}
               </div>
             );
           })}
