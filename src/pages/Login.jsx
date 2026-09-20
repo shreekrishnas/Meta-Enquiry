@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import Atmosphere from '../components/Atmosphere'
 
 export default function Login() {
   const [tab, setTab] = useState('signin')
@@ -31,10 +30,7 @@ export default function Login() {
   const handleSignUp = async (e) => {
     e.preventDefault()
     setError('')
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
+    if (password !== confirmPassword) { setError('Passwords do not match'); return }
     setSubmitting(true)
     try {
       await signUp(email, password, fullName)
@@ -46,62 +42,60 @@ export default function Login() {
     }
   }
 
+  const inputStyle = {
+    width: '100%',
+    padding: '0.625rem 0.75rem',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--border-input)',
+    background: 'var(--surface-input)',
+    color: 'var(--text-primary)',
+    fontSize: '0.8125rem',
+    outline: 'none',
+    boxSizing: 'border-box',
+  }
+
   return (
     <div style={{
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'var(--surface-base)',
-      position: 'relative',
-      overflow: 'hidden',
+      background: 'linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 50%, #F8FAFC 100%)',
     }}>
-      <Atmosphere />
       <div style={{
         width: '100%',
-        maxWidth: '420px',
-        padding: '2.5rem',
-        borderRadius: '1.5rem',
+        maxWidth: '380px',
+        padding: '2rem',
+        borderRadius: 'var(--radius-xl)',
         background: 'var(--surface-card)',
-        backdropFilter: 'blur(24px)',
         border: '1px solid var(--border-subtle)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-        position: 'relative',
-        zIndex: 1,
+        boxShadow: 'var(--shadow-lg)',
       }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', justifyContent: 'center', marginBottom: '1.5rem' }}>
           <div style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: '0.875rem',
-            background: 'linear-gradient(135deg, #6366F1, #7C3AED)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            width: '36px', height: '36px', borderRadius: '8px',
+            background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <svg viewBox="0 0 24 24" fill="white" width="22" height="22">
+            <svg viewBox="0 0 24 24" fill="white" width="18" height="18">
               <path d="M12 2l1.09 3.41L16.5 4.5l-1.41 3.41L18.5 9l-3.41 1.09L16.5 13.5l-3.41-1.41L12 15.5l-1.09-3.41L7.5 13.5l1.41-3.41L5.5 9l3.41-1.09L7.5 4.5l3.41 1.41z" />
             </svg>
           </div>
+          <div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Trilliant</div>
+            <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '-2px' }}>Operations Hub</div>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.5rem', background: 'var(--surface-hover)', borderRadius: '0.75rem', padding: '0.25rem' }}>
+        <div style={{ display: 'flex', gap: '2px', marginBottom: '1.25rem', background: 'var(--surface-hover)', borderRadius: 'var(--radius-md)', padding: '3px' }}>
           {['signin', 'signup'].map(t => (
-            <button
-              key={t}
-              onClick={() => { setTab(t); setError('') }}
+            <button key={t} onClick={() => { setTab(t); setError('') }}
               style={{
-                flex: 1,
-                padding: '0.625rem',
-                borderRadius: '0.5rem',
-                border: 'none',
-                background: tab === t ? 'var(--surface-card-elevated)' : 'transparent',
-                color: tab === t ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                flex: 1, padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: 'none',
+                background: tab === t ? 'var(--surface-card)' : 'transparent',
+                color: tab === t ? 'var(--text-primary)' : 'var(--text-muted)',
+                fontWeight: 500, fontSize: '0.8125rem', cursor: 'pointer',
+                boxShadow: tab === t ? 'var(--shadow-xs)' : 'none',
               }}
             >
               {t === 'signin' ? 'Sign In' : 'Sign Up'}
@@ -110,114 +104,35 @@ export default function Login() {
         </div>
 
         {error && (
-          <div style={{
-            padding: '0.75rem 1rem',
-            borderRadius: '0.75rem',
-            background: 'rgba(220,38,38,0.08)',
-            border: '1px solid rgba(220,38,38,0.2)',
-            color: '#DC2626',
-            fontSize: '0.8125rem',
-            marginBottom: '1rem',
-          }}>
+          <div style={{ padding: '0.625rem 0.75rem', borderRadius: 'var(--radius-md)', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '0.8125rem', marginBottom: '0.75rem' }}>
             {error}
           </div>
         )}
 
         {tab === 'signin' ? (
-          <form onSubmit={handleSignIn} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              className="glass-input"
-              style={inputStyle}
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              className="glass-input"
-              style={inputStyle}
-            />
-            <button type="submit" disabled={submitting} className="btn-primary" style={btnStyle}>
+          <form onSubmit={handleSignIn} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required style={inputStyle} />
+            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
+            <button type="submit" disabled={submitting} className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '0.625rem', marginTop: '0.25rem' }}>
               {submitting ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
         ) : (
-          <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={fullName}
-              onChange={e => setFullName(e.target.value)}
-              required
-              className="glass-input"
-              style={inputStyle}
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              className="glass-input"
-              style={inputStyle}
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              className="glass-input"
-              style={inputStyle}
-            />
-            <input
-              type="password"
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
-              required
-              className="glass-input"
-              style={inputStyle}
-            />
-            <button type="submit" disabled={submitting} className="btn-primary" style={btnStyle}>
+          <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <input type="text" placeholder="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} required style={inputStyle} />
+            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required style={inputStyle} />
+            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
+            <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required style={inputStyle} />
+            <button type="submit" disabled={submitting} className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '0.625rem', marginTop: '0.25rem' }}>
               {submitting ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
         )}
+
+        <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          Demo: demo@trilliant.app / Trilliant@2024
+        </div>
       </div>
     </div>
   )
-}
-
-const inputStyle = {
-  width: '100%',
-  padding: '0.75rem 1rem',
-  borderRadius: '0.75rem',
-  border: '1px solid var(--border-input)',
-  background: 'var(--surface-input)',
-  color: 'var(--text-primary)',
-  fontSize: '0.875rem',
-  outline: 'none',
-  transition: 'border-color 0.2s ease',
-  boxSizing: 'border-box',
-}
-
-const btnStyle = {
-  width: '100%',
-  padding: '0.75rem',
-  borderRadius: '0.75rem',
-  border: 'none',
-  background: 'linear-gradient(135deg, #6366F1, #7C3AED)',
-  color: 'white',
-  fontSize: '0.875rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-  transition: 'opacity 0.2s ease',
-  marginTop: '0.25rem',
 }

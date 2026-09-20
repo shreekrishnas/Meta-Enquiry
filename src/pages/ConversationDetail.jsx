@@ -5,14 +5,12 @@ import { getConversation, getConversationMessages, subscribeToMessages, updateCo
 import { createApproval } from '../services/approvals';
 import { sendMetaMessage, triggerAIPipeline } from '../services/edgeFunctions';
 
-const channelColors = {
-  Instagram: { bg: 'linear-gradient(135deg, #E1306C, #F77737)', color: '#fff' },
-  Facebook: { bg: '#1877F2', color: '#fff' },
-  INSTAGRAM: { bg: 'linear-gradient(135deg, #E1306C, #F77737)', color: '#fff' },
-  FACEBOOK: { bg: '#1877F2', color: '#fff' },
-};
+const statusColors = { NEW: '#94A3B8', IN_PROGRESS: '#3B82F6', WAITING_FOR_POC: '#8B5CF6', RESOLVED: '#10B981', POC_APPROVED: '#10B981', ESCALATED: '#EF4444', CHANGES_REQUESTED: '#F59E0B' };
+const statusLabels = { NEW: 'New', IN_PROGRESS: 'In Progress', WAITING_FOR_POC: 'Under Review', RESOLVED: 'Resolved', POC_APPROVED: 'Approved', ESCALATED: 'Escalated', CHANGES_REQUESTED: 'Changes Req.' };
 
-const statusLabels = { NEW: 'New', IN_PROGRESS: 'In Progress', WAITING_FOR_POC: 'Waiting for POC', RESOLVED: 'Resolved', POC_APPROVED: 'Approved', ESCALATED: 'Escalated', CHANGES_REQUESTED: 'Changes Requested' };
+const card = { background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)' };
+const label = { fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' };
+const inputStyle = { width: '100%', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-input)', background: 'var(--surface-input)', color: 'var(--text-primary)', fontSize: '0.8125rem', outline: 'none', boxSizing: 'border-box' };
 
 export default function ConversationDetail() {
   const { id } = useParams();
@@ -30,12 +28,8 @@ export default function ConversationDetail() {
     if (!id) return;
     setLoading(true);
     setError(null);
-
     Promise.all([getConversation(id), getConversationMessages(id)])
-      .then(([conv, msgs]) => {
-        setConversation(conv);
-        setMessages(msgs || []);
-      })
+      .then(([conv, msgs]) => { setConversation(conv); setMessages(msgs || []); })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
@@ -43,9 +37,7 @@ export default function ConversationDetail() {
   useEffect(() => {
     if (!id) return;
     const channel = subscribeToMessages(id, (payload) => {
-      if (payload.new) {
-        setMessages((prev) => [...prev, payload.new]);
-      }
+      if (payload.new) setMessages((prev) => [...prev, payload.new]);
     });
     return () => { channel.unsubscribe(); };
   }, [id]);
@@ -53,14 +45,9 @@ export default function ConversationDetail() {
   const handleSend = async () => {
     if (!replyText.trim() || sending) return;
     setSending(true);
-    try {
-      await sendMetaMessage(id, replyText.trim(), user?.id);
-      setReplyText('');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSending(false);
-    }
+    try { await sendMetaMessage(id, replyText.trim(), user?.id); setReplyText(''); }
+    catch (err) { setError(err.message); }
+    finally { setSending(false); }
   };
 
   const handleAction = async (action) => {
@@ -69,28 +56,14 @@ export default function ConversationDetail() {
     try {
       if (action === 'approve') {
         const aiDraft = messages.find((m) => m.message_type === 'AI_DRAFT');
-        await createApproval(currentTenant.id, {
-          conversation_id: conversation.id,
-          ai_run_id: aiDraft?.ai_run_id || null,
-          reviewer_id: user?.id,
-          decision: 'APPROVED',
-          original_draft: aiDraft?.content || '',
-          final_draft: aiDraft?.content || '',
-        });
+        await createApproval(currentTenant.id, { conversation_id: conversation.id, ai_run_id: aiDraft?.ai_run_id || null, reviewer_id: user?.id, decision: 'APPROVED', original_draft: aiDraft?.content || '', final_draft: aiDraft?.content || '' });
         setConversation((prev) => ({ ...prev, status: 'POC_APPROVED' }));
       } else if (action === 'poc_review') {
         await updateConversationStatus(conversation.id, 'WAITING_FOR_POC');
         setConversation((prev) => ({ ...prev, status: 'WAITING_FOR_POC' }));
       } else if (action === 'reject') {
         const aiDraft = messages.find((m) => m.message_type === 'AI_DRAFT');
-        await createApproval(currentTenant.id, {
-          conversation_id: conversation.id,
-          ai_run_id: aiDraft?.ai_run_id || null,
-          reviewer_id: user?.id,
-          decision: 'REJECTED',
-          original_draft: aiDraft?.content || '',
-          final_draft: '',
-        });
+        await createApproval(currentTenant.id, { conversation_id: conversation.id, ai_run_id: aiDraft?.ai_run_id || null, reviewer_id: user?.id, decision: 'REJECTED', original_draft: aiDraft?.content || '', final_draft: '' });
         setConversation((prev) => ({ ...prev, status: 'UNDER_REVIEW' }));
       } else if (action === 'escalate') {
         await updateConversationStatus(conversation.id, 'ESCALATED');
@@ -101,119 +74,101 @@ export default function ConversationDetail() {
       } else if (action === 'regenerate') {
         await triggerAIPipeline(conversation.id, currentTenant.id);
       }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setActionLoading(null);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setActionLoading(null); }
   };
 
-  if (loading) {
-    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300, color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading...</div>;
-  }
-
-  if (error && !conversation) {
-    return <div style={{ padding: '1.5rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.75rem', color: '#991B1B', fontSize: '0.85rem' }}>{error}</div>;
-  }
-
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300, color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Loading...</div>;
+  if (error && !conversation) return <div style={{ padding: '1rem', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-md)', color: '#991B1B', fontSize: '0.8125rem' }}>{error}</div>;
   if (!conversation) return null;
 
   const customer = conversation.customers || {};
   const channel = conversation.channel || 'Facebook';
-  const channelStyle = channelColors[channel] || channelColors.Facebook;
   const aiDraft = [...messages].reverse().find((m) => m.message_type === 'AI_DRAFT');
   const visibleMessages = messages.filter((m) => m.message_type !== 'AI_DRAFT');
+  const sc = statusColors[conversation.status] || '#94A3B8';
 
   return (
-    <div className="page-enter" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.25rem', minHeight: 'calc(100vh - 120px)' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div className="glass-card-static" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <h1 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>{customer.display_name || 'Unknown'}</h1>
-          <span style={{ fontSize: '0.66rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: 9999, background: channelStyle.bg, color: channelStyle.color }}>{channel}</span>
-          <span style={{ fontSize: '0.66rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: 9999, background: 'rgba(14,165,233,0.12)', color: '#0284C7' }}>{statusLabels[conversation.status] || conversation.status}</span>
-          <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Conversation #{id}</div>
+    <div className="page-enter" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1rem', minHeight: 'calc(100vh - 120px)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={{ ...card, padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <h1 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{customer.display_name || 'Unknown'}</h1>
+          <span style={{ fontSize: '0.6875rem', fontWeight: 500, padding: '0.125rem 0.5rem', borderRadius: 9999, background: channel === 'INSTAGRAM' ? '#E1306C' : '#1877F2', color: '#fff' }}>{channel}</span>
+          <span style={{ fontSize: '0.6875rem', fontWeight: 500, padding: '0.125rem 0.375rem', borderRadius: 9999, background: `${sc}14`, color: sc }}>{statusLabels[conversation.status] || conversation.status}</span>
+          <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)' }}>#{id?.slice(0, 8)}</div>
         </div>
 
-        {error && (
-          <div style={{ padding: '0.75rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.75rem', color: '#991B1B', fontSize: '0.78rem' }}>{error}</div>
-        )}
+        {error && <div style={{ padding: '0.75rem', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-md)', color: '#991B1B', fontSize: '0.8125rem' }}>{error}</div>}
 
-        <div className="glass-card-static" style={{ padding: '1.25rem', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <div style={{ ...card, padding: '1.25rem', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {visibleMessages.map((msg) => {
             const isCustomer = msg.direction === 'INBOUND';
             return (
               <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isCustomer ? 'flex-start' : 'flex-end', maxWidth: '75%', alignSelf: isCustomer ? 'flex-start' : 'flex-end' }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>{msg.sender_name || (isCustomer ? customer.display_name : 'Agent')} &middot; {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                <div style={{ padding: '0.75rem 1rem', borderRadius: '1rem', fontSize: '0.82rem', lineHeight: 1.5, color: 'var(--text-primary)', background: isCustomer ? 'var(--surface-card)' : 'rgba(14,165,233,0.08)', border: '1px solid var(--border-subtle)' }}>{msg.content}</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                  {msg.sender_name || (isCustomer ? customer.display_name : 'Agent')} &middot; {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+                <div style={{
+                  padding: '0.625rem 0.875rem', borderRadius: 'var(--radius-lg)', fontSize: '0.8125rem', lineHeight: 1.55, color: 'var(--text-primary)',
+                  background: isCustomer ? 'var(--surface-hover)' : '#EEF2FF', border: '1px solid var(--border-subtle)',
+                }}>{msg.content}</div>
               </div>
             );
           })}
 
           {aiDraft && (
-            <div style={{ marginTop: '0.5rem', border: '2px dashed rgba(124,58,237,0.25)', borderRadius: '1rem', padding: '1rem 1.25rem', background: 'rgba(124,58,237,0.03)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/></svg>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7C3AED' }}>AI Suggested Reply</span>
+            <div style={{ marginTop: '0.5rem', border: '2px dashed #C4B5FD', borderRadius: 'var(--radius-lg)', padding: '1rem 1.25rem', background: '#F5F3FF' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l1.09 3.41L16.5 4.5l-1.41 3.41L18.5 9l-3.41 1.09L16.5 13.5l-3.41-1.41L12 15.5l-1.09-3.41L7.5 13.5l1.41-3.41L5.5 9l3.41-1.09L7.5 4.5l3.41 1.41z" /></svg>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#7C3AED' }}>AI Suggested Reply</span>
               </div>
-              <p style={{ fontSize: '0.82rem', lineHeight: 1.6, color: 'var(--text-primary)', margin: '0 0 0.75rem' }}>{aiDraft.content}</p>
+              <p style={{ fontSize: '0.8125rem', lineHeight: 1.6, color: 'var(--text-primary)', margin: '0 0 0.75rem' }}>{aiDraft.content}</p>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <button className="btn-primary" style={{ fontSize: '0.75rem', padding: '0.4rem 0.85rem' }} disabled={actionLoading === 'approve'} onClick={() => handleAction('approve')}>{actionLoading === 'approve' ? 'Approving...' : 'Approve'}</button>
-                <button className="btn-ghost" style={{ fontSize: '0.75rem', padding: '0.4rem 0.85rem' }} disabled={actionLoading === 'poc_review'} onClick={() => handleAction('poc_review')}>Request POC Review</button>
-                <button className="btn-ghost" style={{ fontSize: '0.75rem', padding: '0.4rem 0.85rem', color: '#EF4444' }} disabled={actionLoading === 'reject'} onClick={() => handleAction('reject')}>Reject</button>
-                <button className="btn-secondary" style={{ fontSize: '0.75rem', padding: '0.4rem 0.85rem' }} disabled={actionLoading === 'regenerate'} onClick={() => handleAction('regenerate')}>{actionLoading === 'regenerate' ? 'Regenerating...' : 'Regenerate AI Draft'}</button>
+                <button className="btn-primary" disabled={actionLoading === 'approve'} onClick={() => handleAction('approve')}>{actionLoading === 'approve' ? 'Approving...' : 'Approve'}</button>
+                <button className="btn-ghost" disabled={actionLoading === 'poc_review'} onClick={() => handleAction('poc_review')}>Request Review</button>
+                <button className="btn-ghost" style={{ color: '#EF4444' }} disabled={actionLoading === 'reject'} onClick={() => handleAction('reject')}>Reject</button>
+                <button className="btn-secondary" disabled={actionLoading === 'regenerate'} onClick={() => handleAction('regenerate')}>{actionLoading === 'regenerate' ? 'Regenerating...' : 'Regenerate'}</button>
               </div>
             </div>
           )}
 
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <input className="glass-input" value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="Type a reply..." style={{ flex: 1, fontSize: '0.82rem' }} onKeyDown={(e) => { if (e.key === 'Enter') handleSend(); }} />
-            <button className="btn-primary" style={{ fontSize: '0.78rem' }} disabled={sending || !replyText.trim()} onClick={handleSend}>{sending ? 'Sending...' : 'Send'}</button>
+            <input value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="Type a reply..." style={{ ...inputStyle, flex: 1 }} onKeyDown={(e) => { if (e.key === 'Enter') handleSend(); }} />
+            <button className="btn-primary" disabled={sending || !replyText.trim()} onClick={handleSend}>{sending ? 'Sending...' : 'Send'}</button>
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div className="glass-card-static" style={{ padding: '1.1rem' }}>
-          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Customer Info</div>
-          {[
-            ['Channel', customer.channel || '-'],
-            ['ID', customer.external_customer_id || '-'],
-            ['Name', customer.display_name || '-'],
-          ].map(([label, val]) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px solid rgba(15,23,42,0.04)' }}>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{label}</span>
-              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-primary)' }}>{val}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={{ ...card, padding: '1rem' }}>
+          <div style={{ ...label, marginBottom: '0.75rem' }}>Customer Info</div>
+          {[['Channel', customer.channel || '-'], ['ID', customer.external_customer_id || '-'], ['Name', customer.display_name || '-']].map(([l, v]) => (
+            <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.375rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{l}</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-primary)' }}>{v}</span>
             </div>
           ))}
         </div>
 
-        <div className="glass-card-static" style={{ padding: '1.1rem' }}>
-          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Metadata</div>
-          {[
-            ['Category', conversation.category || '-'],
-            ['Priority', conversation.priority || '-'],
-            ['Status', statusLabels[conversation.status] || conversation.status],
-            ['Channel', conversation.channel || '-'],
-          ].map(([label, val]) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px solid rgba(15,23,42,0.04)' }}>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{label}</span>
-              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-primary)', textTransform: 'capitalize' }}>{val}</span>
+        <div style={{ ...card, padding: '1rem' }}>
+          <div style={{ ...label, marginBottom: '0.75rem' }}>Metadata</div>
+          {[['Category', conversation.category || '-'], ['Priority', conversation.priority || '-'], ['Status', statusLabels[conversation.status] || conversation.status], ['Channel', conversation.channel || '-']].map(([l, v]) => (
+            <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.375rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{l}</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-primary)', textTransform: 'capitalize' }}>{v}</span>
             </div>
           ))}
         </div>
 
-        <div className="glass-card-static" style={{ padding: '1.1rem' }}>
-          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Actions</div>
+        <div style={{ ...card, padding: '1rem' }}>
+          <div style={{ ...label, marginBottom: '0.75rem' }}>Actions</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <button className="btn-secondary" style={{ width: '100%', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center' }} disabled={actionLoading === 'escalate'} onClick={() => handleAction('escalate')}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg>
-              Escalate
-            </button>
-            <button className="btn-primary" style={{ width: '100%', fontSize: '0.75rem', background: '#10B981' }} disabled={actionLoading === 'resolve'} onClick={() => handleAction('resolve')}>Resolve</button>
+            <button className="btn-secondary" style={{ width: '100%', justifyContent: 'center' }} disabled={actionLoading === 'escalate'} onClick={() => handleAction('escalate')}>Escalate</button>
+            <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', background: '#10B981' }} disabled={actionLoading === 'resolve'} onClick={() => handleAction('resolve')}>Resolve</button>
           </div>
           <div style={{ marginTop: '0.75rem' }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>Add Note</div>
-            <textarea className="glass-input" value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Internal note..." rows={3} style={{ width: '100%', resize: 'vertical', fontSize: '0.75rem' }} />
+            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '0.375rem' }}>Internal Note</div>
+            <textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Add a note..." rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
           </div>
         </div>
       </div>
