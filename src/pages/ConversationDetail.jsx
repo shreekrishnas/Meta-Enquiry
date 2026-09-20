@@ -55,14 +55,14 @@ export default function ConversationDetail() {
     setActionLoading(action);
     try {
       if (action === 'approve') {
-        const aiDraft = messages.find((m) => m.message_type === 'AI_DRAFT');
+        const aiDraft = messages.find((m) => m.sender_type === 'AI_DRAFT' || m.message_type === 'AI_DRAFT');
         await createApproval(currentTenant.id, { conversation_id: conversation.id, ai_run_id: aiDraft?.ai_run_id || null, reviewer_id: user?.id, decision: 'APPROVED', original_draft: aiDraft?.content || '', final_draft: aiDraft?.content || '' });
         setConversation((prev) => ({ ...prev, status: 'POC_APPROVED' }));
       } else if (action === 'poc_review') {
         await updateConversationStatus(conversation.id, 'WAITING_FOR_POC');
         setConversation((prev) => ({ ...prev, status: 'WAITING_FOR_POC' }));
       } else if (action === 'reject') {
-        const aiDraft = messages.find((m) => m.message_type === 'AI_DRAFT');
+        const aiDraft = messages.find((m) => m.sender_type === 'AI_DRAFT' || m.message_type === 'AI_DRAFT');
         await createApproval(currentTenant.id, { conversation_id: conversation.id, ai_run_id: aiDraft?.ai_run_id || null, reviewer_id: user?.id, decision: 'REJECTED', original_draft: aiDraft?.content || '', final_draft: '' });
         setConversation((prev) => ({ ...prev, status: 'UNDER_REVIEW' }));
       } else if (action === 'escalate') {
@@ -84,8 +84,8 @@ export default function ConversationDetail() {
 
   const customer = conversation.customers || {};
   const channel = conversation.channel || 'Facebook';
-  const aiDraft = [...messages].reverse().find((m) => m.message_type === 'AI_DRAFT');
-  const visibleMessages = messages.filter((m) => m.message_type !== 'AI_DRAFT');
+  const aiDraft = [...messages].reverse().find((m) => m.sender_type === 'AI_DRAFT' || m.message_type === 'AI_DRAFT');
+  const visibleMessages = messages.filter((m) => m.sender_type !== 'AI_DRAFT' && m.message_type !== 'AI_DRAFT');
   const sc = statusColors[conversation.status] || '#94A3B8';
   const pc = priorityAccent[conversation.priority] || '#94A3B8';
 

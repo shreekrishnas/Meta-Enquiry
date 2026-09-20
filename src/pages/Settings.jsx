@@ -20,7 +20,7 @@ export default function Settings() {
   const [integrations, setIntegrations] = useState([]);
   const [members, setMembers] = useState([]);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('agent');
+  const [inviteRole, setInviteRole] = useState('MARKETING');
   const [inviting, setInviting] = useState(false);
   const [slaFirstResponse, setSlaFirstResponse] = useState(30);
   const [slaResolution, setSlaResolution] = useState(24);
@@ -193,15 +193,18 @@ export default function Settings() {
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
             <input placeholder="Email address" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
             <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} style={{ ...inputStyle, width: 110 }}>
-              <option value="admin">Admin</option>
-              <option value="poc">POC</option>
-              <option value="agent">Agent</option>
+              <option value="TENANT_ADMIN">Admin</option>
+              <option value="BRAND_POC">POC</option>
+              <option value="MARKETING">Marketing</option>
+              <option value="KB_ADMIN">KB Admin</option>
             </select>
             <button className="btn-primary" disabled={inviting} onClick={handleInvite}>{inviting ? 'Inviting...' : 'Invite'}</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
             {members.length === 0 && <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>No team members.</div>}
-            {members.map((m) => (
+            {members.map((m) => {
+              const roleLabels = { SUPER_ADMIN: 'Super Admin', TENANT_ADMIN: 'Admin', MARKETING: 'Marketing', BRAND_POC: 'POC', KB_ADMIN: 'KB Admin', SYSTEM_ADMIN: 'System Admin' };
+              return (
               <div key={m.id} className="table-row" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 1rem', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
                 <div style={{ width: 32, height: 32, borderRadius: '8px', background: 'var(--accent-primary-soft)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6875rem', fontWeight: 700, flexShrink: 0 }}>
                   {(m.users?.full_name || m.users?.email || '?')[0]?.toUpperCase()}
@@ -210,14 +213,16 @@ export default function Settings() {
                   <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>{m.users?.full_name || m.users?.email || 'Unknown'}</div>
                   <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{m.users?.email}</div>
                 </div>
-                <select value={m.role} onChange={(e) => handleRoleChange(m.id, e.target.value)} style={{ ...inputStyle, width: 100, padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
-                  <option value="admin">Admin</option>
-                  <option value="poc">POC</option>
-                  <option value="agent">Agent</option>
+                <select value={m.role} onChange={(e) => handleRoleChange(m.id, e.target.value)} style={{ ...inputStyle, width: 110, padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
+                  <option value="TENANT_ADMIN">Admin</option>
+                  <option value="BRAND_POC">POC</option>
+                  <option value="MARKETING">Marketing</option>
+                  <option value="KB_ADMIN">KB Admin</option>
                 </select>
                 <button className="btn-ghost" style={{ color: '#EF4444', fontSize: '0.75rem' }} onClick={() => handleRemoveMember(m.id)}>Remove</button>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

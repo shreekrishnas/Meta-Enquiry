@@ -96,7 +96,7 @@ export default function POCReviews() {
             const category = conv?.category || 'General';
             const priority = conv?.priority || 'low';
             const latestAiRun = review.source === 'pending' && review.ai_runs?.length > 0 ? review.ai_runs[review.ai_runs.length - 1] : null;
-            const draftContent = review.source === 'history' ? (review.final_draft || review.original_draft || '') : (latestAiRun?.draft_content || '');
+            const draftContent = review.source === 'history' ? (review.final_draft || review.original_draft || '') : (latestAiRun?.output_data?.draft || latestAiRun?.draft_content || '');
             const badge = statusBadge[review.displayStatus] || statusBadge.Pending;
 
             return (
